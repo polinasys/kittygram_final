@@ -1,19 +1,15 @@
 # flake8: noqa
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Загружаем .env файл
-load_dotenv()
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-cg6*%6d51ef8f#4!r3*$vmxm4)abgjw8mo!4y-q*uq1!4$-89$')
 
-SECRET_KEY = os.getenv('SECRET_KEY')
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable is not set")
-
+# В production DEBUG должен быть False
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
+# Разрешенные хосты из переменной окружения
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
@@ -59,17 +55,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'kittygram_backend.wsgi.application'
 
-# База данных: если переменная USE_SQLITE=True, используем SQLite
-USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
+# Настройки базы данных - PostgreSQL для продакшена, SQLite для локальной разработки
+# Проверяем, запущено ли приложение в контейнере
+IN_DOCKER = os.getenv('IN_DOCKER', 'False') == 'True'
 
-if USE_SQLITE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
+if IN_DOCKER or os.getenv('DB_HOST'):
+    # Используем PostgreSQL в контейнерах
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -80,7 +71,16 @@ else:
             'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
+else:
+    # Для локальной разработки используем SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -97,17 +97,20 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Europe/Moscow'  # Исправлено
+
+TIME_ZONE = 'UTC'
+
 USE_I18N = True
+
 USE_L10N = True
+
 USE_TZ = True
 
-# Исправлено: использование BASE_DIR
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = '/staticfiles/'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -115,9 +118,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated', 
     ],
+
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }

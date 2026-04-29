@@ -4,14 +4,10 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   tests:
     runs-on: ubuntu-latest
-    
     services:
       postgres:
         image: postgres:13
@@ -30,12 +26,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: 3.9
 
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff
           pip install -r backend/requirements.txt
 
       - name: Check code with ruff
@@ -47,14 +42,7 @@ jobs:
           POSTGRES_USER: kittygram_user
           POSTGRES_PASSWORD: kittygram_password
           POSTGRES_DB: kittygram
-          DB_NAME: kittygram
-          DB_USER: kittygram_user
-          DB_PASSWORD: kittygram_password
-          DB_HOST: localhost
-          DB_PORT: 5432
-          SECRET_KEY: test_key
-          DEBUG: False
-          ALLOWED_HOSTS: localhost
+          DJANGO_SECRET_KEY: test_key
         run: |
           cd backend/
           python manage.py test
@@ -72,13 +60,11 @@ jobs:
       - name: Test frontend
         run: |
           cd frontend/
-          npm test -- --watchAll=false --passWithNoTests
+          npm test -- --watchAll=false
 
   build_and_push:
     runs-on: ubuntu-latest
     needs: tests
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
@@ -119,20 +105,9 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     needs: build_and_push
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
     steps:
-      - name: Send Telegram notification
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: |
-            Kittygram CI/CD завершен успешно!
-            
-            Проект: Kittygram
-            Автор: ${{ github.actor }}
-            Коммит: ${{ github.event.head_commit.message }}
-            Ссылка: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
-            
-            Образы на Docker Hub обновлены!
+      - name: Notify Telegram
+        run: |
+          curl -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+          -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+          -d text="Проект был успешно протестирован и собран."
