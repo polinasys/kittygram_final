@@ -21,8 +21,8 @@ services:
     build: ./backend/
     env_file: .env
     volumes:
-      - static:/staticfiles
-      - media:/media
+      - static:/app/staticfiles  
+      - media:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -34,7 +34,7 @@ services:
   frontend:
     build: ./frontend/
     volumes:
-      - static:/app/build  # Монтируем build директорию
+      - static:/app/build
     depends_on:
       - backend
 
@@ -47,4 +47,3 @@ services:
       - media:/media
     depends_on:
       - backend
-      - frontend
