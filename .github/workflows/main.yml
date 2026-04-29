@@ -1,9 +1,10 @@
 name: Kittygram CI/CD
 
+# Триггеры - когда запускать
 on:
   push:
     branches:
-      - main
+      - main  # При пуше в ветку main
 
 jobs:
   tests:
