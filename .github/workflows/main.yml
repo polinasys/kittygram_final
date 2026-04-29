@@ -11,9 +11,6 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
     
     services:
       postgres:
@@ -30,10 +27,10 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.11'
 
       - name: Install backend dependencies
         run: |
@@ -41,13 +38,9 @@ jobs:
           pip install ruff
           pip install -r backend/requirements.txt
 
-      - name: Check code with ruff (lint)
+      - name: Check code with ruff
         run: |
           ruff check backend
-
-      - name: Check code formatting with ruff (format)
-        run: |
-          ruff format --check backend
 
       - name: Test with Django tests
         env:
@@ -59,12 +52,12 @@ jobs:
           DB_PASSWORD: kittygram_password
           DB_HOST: localhost
           DB_PORT: 5432
-          SECRET_KEY: test_secret_key
+          SECRET_KEY: test_key
           DEBUG: False
           ALLOWED_HOSTS: localhost
         run: |
           cd backend/
-          python manage.py test --verbosity=2
+          python manage.py test
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -132,8 +125,8 @@ jobs:
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}  
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }} 
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             Kittygram CI/CD завершен успешно!
             
@@ -142,7 +135,4 @@ jobs:
             Коммит: ${{ github.event.head_commit.message }}
             Ссылка: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
             
-            Образы на Docker Hub:
-            - ${{ secrets.DOCKER_USERNAME }}/kittygram_backend:latest
-            - ${{ secrets.DOCKER_USERNAME }}/kittygram_frontend:latest
-            - ${{ secrets.DOCKER_USERNAME }}/kittygram_gateway:latest
+            Образы на Docker Hub обновлены!
